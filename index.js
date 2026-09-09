@@ -44,7 +44,7 @@ client.on('messageCreate', async (message) => {
     try {
       const res = await axios.get(TARGET_URL, { timeout: 10000 });
       const responseTime = Date.now() - startTime;
-      
+
       const embed = new EmbedBuilder()
         .setTitle('📊 リアルタイム稼働状況')
         .addFields(
@@ -100,21 +100,23 @@ async function checkAndNotify() {
     currentStatus = 'DOWN';
   }
 
-  // 状態が変化した時（UP -> DOWN / DOWN -> UP）のみ通知
-  if (currentStatus === 'DOWN' && previousStatus === 'UP') {
-    const embed = new EmbedBuilder()
-      .setTitle('🚨 【障害発生】Webサイトがダウンしました')
-      .setDescription(`監視対象: ${TARGET_URL}`)
-      .setColor(0xE74C3C)
-      .setTimestamp();
-    channel.send({ embeds: [embed] });
-  } else if (currentStatus === 'UP' && previousStatus === 'DOWN') {
-    const embed = new EmbedBuilder()
-      .setTitle('✅ 【復旧】Webサイトが正常に戻りました')
-      .setDescription(`監視対象: ${TARGET_URL}\n応答時間: ${responseTime} ms`)
-      .setColor(0x2ECC71)
-      .setTimestamp();
-    channel.send({ embeds: [embed] });
+  // `!status` のレスポンス分岐の例
+  if (res.status === 200) {
+    if (responseTime >= 1500) {
+      embed.setTitle('⚠️ 動作不安定 (高レイテンシ検知)')
+        .setColor(0xF1C40F) // 黄色
+        .addFields(
+          { name: 'ステータス', value: '⚠️ 遅延発生中', inline: true },
+          { name: '応答時間', value: `${responseTime} ms (遅い)`, inline: true }
+        );
+    } else {
+      embed.setTitle('📊 リアルタイム稼働状況')
+        .setColor(0x2ECC71) // 緑色
+        .addFields(
+          { name: 'ステータス', value: '✅ 正常稼働中', inline: true },
+          { name: '応答時間', value: `${responseTime} ms`, inline: true }
+        );
+    }
   }
 
   previousStatus = currentStatus;
